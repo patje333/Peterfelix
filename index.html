@@ -1,186 +1,344 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Book Wishlist</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <style>
-        .book-card {
-            transition: all 0.3s ease;
-        }
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        .add-book-btn {
-            transition: all 0.3s ease;
-        }
-        .add-book-btn:hover {
-            transform: scale(1.05);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Book Wishlist</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <style>
+    .book-card { transition: all 0.3s ease; }
+    .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+    .add-book-btn { transition: all 0.3s ease; }
+    .add-book-btn:hover { transform: scale(1.05); }
+
+    /* Drag feedback */
+    .dragging {
+      opacity: 0.5;
+      outline: 3px dashed rgba(79,70,229,0.75);
+      transform: scale(0.98);
+    }
+    .drag-over {
+      border: 3px dashed rgba(16,185,129,0.9);
+      background-color: #ecfdf5;
+    }
+
+    /* Book cover ratio 2:3 */
+    .book-cover { aspect-ratio: 2 / 3; }
+
+    /* Make grid a little tighter to better fit portrait covers */
+    #books-container { gap: 1rem; }
+  </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <header class="mb-12 text-center">
-            <h1 class="text-4xl font-bold text-indigo-800 mb-2">My Book Wishlist</h1>
-            <p class="text-gray-600">Track all the books you'd love to read</p>
-        </header>
+  <div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="mb-12 text-center">
+      <h1 class="text-4xl font-bold text-indigo-800 mb-2">My Book Wishlist</h1>
+      <p class="text-gray-600">Track all the books you'd love to read</p>
+    </header>
 
-        <!-- Add Book Button -->
-        <div class="flex justify-center mb-10">
-            <button onclick="openModal()" class="add-book-btn flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-full shadow-lg">
-                <i data-feather="plus" class="mr-2"></i> Add New Book
-            </button>
-        </div>
-
-        <!-- Books Gallery -->
-        <div id="books-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <!-- Books will be dynamically added here -->
-        </div>
-
-        <!-- Empty State -->
-        <div id="empty-state" class="text-center py-20 hidden">
-            <i data-feather="book-open" class="w-16 h-16 mx-auto text-gray-300 mb-4"></i>
-            <h3 class="text-xl font-medium text-gray-500">Your wishlist is empty</h3>
-            <p class="text-gray-400 mt-2">Add your first book to get started</p>
-        </div>
+    <!-- Add Button -->
+    <div class="flex justify-center mb-8">
+      <button onclick="openModal()" class="add-book-btn flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-full shadow-lg">
+        <i data-feather="plus" class="mr-2"></i> Add New Book
+      </button>
     </div>
 
-    <!-- Add Book Modal -->
-    <div id="add-book-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-semibold">Add New Book</h3>
-                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
-                    <i data-feather="x"></i>
-                </button>
+    <!-- Books -->
+    <div id="books-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+
+    <!-- Empty -->
+    <div id="empty-state" class="text-center py-20 hidden">
+      <i data-feather="book-open" class="w-16 h-16 mx-auto text-gray-300 mb-4"></i>
+      <h3 class="text-xl font-medium text-gray-500">Your wishlist is empty</h3>
+      <p class="text-gray-400 mt-2">Add your first book to get started</p>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div id="add-book-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="modal-title" class="text-xl font-semibold">Add New Book</h3>
+        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700"><i data-feather="x"></i></button>
+      </div>
+      <form id="book-form" class="space-y-4">
+        <div>
+          <label for="book-image" class="block text-sm font-medium text-gray-700 mb-1">Book Cover</label>
+          <input type="text" id="book-image" placeholder="Paste image URL" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label for="book-title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <input type="text" id="book-title" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label for="book-author" class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+          <input type="text" id="book-author" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label for="book-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea id="book-description" rows="3" placeholder="Add a short description or notes" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+        <div>
+          <label for="book-url" class="block text-sm font-medium text-gray-700 mb-1">Purchase URL (optional)</label>
+          <input type="url" id="book-url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="pt-2">
+          <button id="submit-btn" type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-200">Add Book</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="details-title" class="text-2xl font-bold text-indigo-700"></h3>
+        <button onclick="closeDetailsModal()" class="text-gray-500 hover:text-gray-700"><i data-feather="x"></i></button>
+      </div>
+      <div class="flex flex-col md:flex-row gap-4">
+        <div class="w-full md:w-1/3">
+          <img id="details-image" src="" alt="" class="rounded-lg shadow-md w-full">
+        </div>
+        <div class="w-full md:w-2/3">
+          <p id="details-author" class="text-gray-700 mb-3"></p>
+          <p id="details-description" class="text-gray-600 mb-4"></p>
+          <div id="details-link"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    AOS.init();
+    feather.replace();
+
+    // Data
+    let books = JSON.parse(localStorage.getItem('books')) || [];
+    let editingIndex = null;
+
+    // DOM
+    const booksContainer = document.getElementById('books-container');
+    const emptyState = document.getElementById('empty-state');
+    const modal = document.getElementById('add-book-modal');
+    const bookForm = document.getElementById('book-form');
+    const modalTitle = document.getElementById('modal-title');
+    const submitBtn = document.getElementById('submit-btn');
+
+    const detailsModal = document.getElementById('details-modal');
+    const detailsTitle = document.getElementById('details-title');
+    const detailsAuthor = document.getElementById('details-author');
+    const detailsImage = document.getElementById('details-image');
+    const detailsDescription = document.getElementById('details-description');
+    const detailsLink = document.getElementById('details-link');
+
+    // Render
+    function displayBooks() {
+      booksContainer.innerHTML = '';
+
+      if (books.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      books.forEach((book, index) => {
+        const bookCard = document.createElement('div');
+        bookCard.className = 'book-card bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg';
+        bookCard.setAttribute('data-aos', 'fade-up');
+        bookCard.setAttribute('draggable', 'true');
+        bookCard.setAttribute('data-index', index);
+
+        // Attach drag handlers (use currentTarget inside handlers)
+        bookCard.addEventListener('dragstart', dragStart);
+        bookCard.addEventListener('dragover', dragOver);
+        bookCard.addEventListener('dragleave', dragLeave);
+        bookCard.addEventListener('drop', drop);
+        bookCard.addEventListener('dragend', dragEnd);
+
+        const imageUrl = book.image || 'http://static.photos/books/640x960/' + (index + 1);
+
+        bookCard.innerHTML = `
+          <div class="book-cover overflow-hidden cursor-pointer" onclick="openDetails(${index})">
+            <img src="${imageUrl}" alt="${book.title}" class="w-full h-full object-cover">
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-lg mb-1 truncate cursor-pointer" onclick="openDetails(${index})">${escapeHtml(book.title)}</h3>
+            <p class="text-gray-600 text-sm mb-3">${escapeHtml(book.author)}</p>
+            <div class="flex justify-between items-center">
+              ${book.url ? `<a href="${book.url}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm flex items-center"><i data-feather="shopping-bag" class="w-4 h-4 mr-1"></i> Buy</a>` : '<div></div>'}
+              <div class="flex space-x-2">
+                <button onclick="editBook(${index})" class="text-blue-500 hover:text-blue-700 text-sm flex items-center"><i data-feather="edit-2" class="w-4 h-4 mr-1"></i> Edit</button>
+                <button onclick="removeBook(${index})" class="text-red-500 hover:text-red-700 text-sm flex items-center"><i data-feather="trash-2" class="w-4 h-4 mr-1"></i> Remove</button>
+              </div>
             </div>
-            <form id="book-form" class="space-y-4">
-                <div>
-                    <label for="book-image" class="block text-sm font-medium text-gray-700 mb-1">Book Cover</label>
-                    <input type="text" id="book-image" placeholder="Paste image URL" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="book-title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                    <input type="text" id="book-title" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="book-author" class="block text-sm font-medium text-gray-700 mb-1">Author</label>
-                    <input type="text" id="book-author" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="book-url" class="block text-sm font-medium text-gray-700 mb-1">Purchase URL (optional)</label>
-                    <input type="url" id="book-url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div class="pt-2">
-                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-200">
-                        Add Book
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+          </div>
+        `;
+        booksContainer.appendChild(bookCard);
+      });
 
-    <script>
-        // Initialize libraries
-        AOS.init();
-        feather.replace();
+      // re-run feather icons on new DOM
+      feather.replace();
+    }
 
-        // Book data storage
-        let books = JSON.parse(localStorage.getItem('books')) || [];
+    // Utility: simple escape to avoid accidental HTML injection for title/author
+    function escapeHtml(str) {
+      if (!str && str !== '') return '';
+      return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+    }
 
-        // DOM elements
-        const booksContainer = document.getElementById('books-container');
-        const emptyState = document.getElementById('empty-state');
-        const modal = document.getElementById('add-book-modal');
-        const bookForm = document.getElementById('book-form');
+    // Drag-and-drop state
+    let draggedIndex = null;
 
-        // Display books
-        function displayBooks() {
-            booksContainer.innerHTML = '';
-            
-            if (books.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            
-            emptyState.classList.add('hidden');
-            
-            books.forEach((book, index) => {
-                const bookCard = document.createElement('div');
-                bookCard.className = 'book-card bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg';
-                bookCard.setAttribute('data-aos', 'fade-up');
-                
-                const imageUrl = book.image || 'http://static.photos/books/640x360/' + (index + 1);
-                
-                bookCard.innerHTML = `
-                    <div class="h-48 overflow-hidden">
-                        <img src="${imageUrl}" alt="${book.title}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="p-4">
-                        <h3 class="font-semibold text-lg mb-1 truncate">${book.title}</h3>
-                        <p class="text-gray-600 text-sm mb-3">${book.author}</p>
-                        <div class="flex justify-between items-center">
-                            ${book.url ? `<a href="${book.url}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm flex items-center">
-                                <i data-feather="shopping-bag" class="w-4 h-4 mr-1"></i> Buy
-                            </a>` : '<div></div>'}
-                            <button onclick="removeBook(${index})" class="text-red-500 hover:text-red-700 text-sm flex items-center">
-                                <i data-feather="trash-2" class="w-4 h-4 mr-1"></i> Remove
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                booksContainer.appendChild(bookCard);
-            });
-            
-            feather.replace();
-        }
+    function dragStart(e) {
+      // use currentTarget to ensure we have the card even when drag started on a child element
+      const card = e.currentTarget;
+      draggedIndex = parseInt(card.getAttribute('data-index'), 10);
+      // set dataTransfer for better cross-browser behavior
+      try {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(draggedIndex));
+      } catch (err) {
+        // some browsers in some contexts may throw — ignore
+      }
+      card.classList.add('dragging');
+    }
 
-        // Add new book
-        bookForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const newBook = {
-                title: document.getElementById('book-title').value,
-                author: document.getElementById('book-author').value,
-                image: document.getElementById('book-image').value || null,
-                url: document.getElementById('book-url').value || null
-            };
-            
-            books.push(newBook);
-            localStorage.setItem('books', JSON.stringify(books));
-            
-            closeModal();
-            displayBooks();
-            bookForm.reset();
-        });
+    function dragOver(e) {
+      e.preventDefault(); // must prevent to allow drop
+      const card = e.currentTarget;
+      // highlight this card as a drop target
+      card.classList.add('drag-over');
+      try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+    }
 
-        // Remove book
-        function removeBook(index) {
-            books.splice(index, 1);
-            localStorage.setItem('books', JSON.stringify(books));
-            displayBooks();
-        }
+    function dragLeave(e) {
+      const card = e.currentTarget;
+      card.classList.remove('drag-over');
+    }
 
-        // Modal functions
-        function openModal() {
-            modal.classList.remove('hidden');
-        }
+    function drop(e) {
+      e.preventDefault();
+      const card = e.currentTarget;
+      let targetIndex = parseInt(card.getAttribute('data-index'), 10);
 
-        function closeModal() {
-            modal.classList.add('hidden');
-        }
+      // if draggedIndex isn't set (rare), fall back to dataTransfer
+      if (draggedIndex === null || draggedIndex === undefined || isNaN(draggedIndex)) {
+        const dt = e.dataTransfer ? e.dataTransfer.getData('text/plain') : null;
+        draggedIndex = dt ? parseInt(dt, 10) : null;
+      }
 
-        // Initial display
-        displayBooks();
-    </script>
+      // safety checks
+      if (draggedIndex === null || isNaN(draggedIndex) || isNaN(targetIndex) || draggedIndex === targetIndex) {
+        card.classList.remove('drag-over');
+        return;
+      }
+
+      // reorder
+      const moved = books.splice(draggedIndex, 1)[0];
+      // if moving forward in list and removing earlier, targetIndex shifts by -1
+      if (draggedIndex < targetIndex) {
+        books.splice(targetIndex, 0, moved);
+      } else {
+        books.splice(targetIndex, 0, moved);
+      }
+
+      // persist and re-render
+      localStorage.setItem('books', JSON.stringify(books));
+      draggedIndex = null;
+      card.classList.remove('drag-over');
+      displayBooks();
+    }
+
+    function dragEnd(e) {
+      // clear any visual leftover
+      document.querySelectorAll('.book-card').forEach(card => {
+        card.classList.remove('dragging','drag-over');
+      });
+      draggedIndex = null;
+    }
+
+    // Form submit (add/update)
+    bookForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      const bookData = {
+        title: document.getElementById('book-title').value.trim(),
+        author: document.getElementById('book-author').value.trim(),
+        description: document.getElementById('book-description').value.trim() || '',
+        image: document.getElementById('book-image').value.trim() || null,
+        url: document.getElementById('book-url').value.trim() || null
+      };
+
+      if (editingIndex !== null) {
+        books[editingIndex] = bookData;
+        editingIndex = null;
+      } else {
+        books.push(bookData);
+      }
+      localStorage.setItem('books', JSON.stringify(books));
+      closeModal();
+      displayBooks();
+      bookForm.reset();
+    });
+
+    // Remove
+    function removeBook(index) {
+      if (!Number.isInteger(index)) index = parseInt(index,10);
+      books.splice(index, 1);
+      localStorage.setItem('books', JSON.stringify(books));
+      displayBooks();
+    }
+
+    // Edit
+    function editBook(index) {
+      const book = books[index];
+      document.getElementById('book-title').value = book.title || '';
+      document.getElementById('book-author').value = book.author || '';
+      document.getElementById('book-description').value = book.description || '';
+      document.getElementById('book-image').value = book.image || '';
+      document.getElementById('book-url').value = book.url || '';
+      modalTitle.textContent = 'Edit Book';
+      submitBtn.textContent = 'Update Book';
+      editingIndex = index;
+      openModal();
+    }
+
+    // Details
+    function openDetails(index) {
+      const book = books[index];
+      detailsTitle.textContent = book.title || '';
+      detailsAuthor.textContent = book.author ? ('by ' + book.author) : '';
+      detailsDescription.textContent = book.description || 'No description provided.';
+      detailsImage.src = book.image || ('http://static.photos/books/640x960/' + (index + 1));
+      detailsImage.alt = book.title || 'cover';
+      if (book.url) {
+        detailsLink.innerHTML = `<a href="${book.url}" target="_blank" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-200"><i data-feather="shopping-bag" class="w-4 h-4 mr-2"></i> Buy this book</a>`;
+      } else {
+        detailsLink.innerHTML = `<p class="text-gray-400">No purchase link available</p>`;
+      }
+      detailsModal.classList.remove('hidden');
+      feather.replace();
+    }
+    function closeDetailsModal(){ detailsModal.classList.add('hidden'); }
+
+    // Modal open/close
+    function openModal(){ modal.classList.remove('hidden'); }
+    function closeModal(){
+      modal.classList.add('hidden');
+      modalTitle.textContent = 'Add New Book';
+      submitBtn.textContent = 'Add Book';
+      bookForm.reset();
+      editingIndex = null;
+    }
+
+    // initial render
+    displayBooks();
+  </script>
 </body>
 </html>
